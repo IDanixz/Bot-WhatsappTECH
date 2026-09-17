@@ -1,13 +1,11 @@
 """
 Bot Shopee -> WhatsApp + Supabase (versão TECH / SETUP)
 --------------------------------------------------------
-- Busca produtos por uma lista de palavras-chave de tecnologia
-  (monitor, teclado, mouse, headset, cadeira gamer, mesa gamer,
-  SSD, power bank, smartwatch, etc.) em vez de busca geral.
+- Busca produtos por uma grande lista de palavras-chave de tecnologia
+  (monitor, teclado, mouse, headset, cadeira gamer, mesa gamer, SSD,
+  placa de vídeo, power bank, smartwatch, etc.) em vez de busca geral.
+  O nicho é garantido pelas próprias keywords de busca.
 - Filtra: >= 1000 vendas e >= 4.5 estrelas.
-- Filtra também por "é produto de tech?" (whitelist), então mesmo
-  que a keyword traga lixo, só posta o que bate com termos de
-  eletrônicos/gadgets/setup.
 - Processa página por página, keyword por keyword: não espera
   terminar toda a busca. Posta assim que encontra um produto válido
   e ainda não enviado.
@@ -20,9 +18,6 @@ import sys
 import json
 import time
 import hashlib
-import re
-import unicodedata
-
 import requests
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -56,56 +51,57 @@ SHOPEE_SEARCH_KEYWORDS = [
     for termo in os.getenv(
         "SHOPEE_SEARCH_KEYWORDS",
         ",".join([
-            "monitor gamer",
-            "monitor ultrawide",
-            "teclado mecanico",
-            "teclado sem fio",
-            "mouse gamer",
-            "mouse sem fio",
-            "mousepad gamer",
-            "headset gamer",
-            "fone bluetooth",
-            "fone de ouvido",
-            "caixa de som bluetooth",
-            "cadeira gamer",
-            "cadeira escritorio",
-            "mesa gamer",
-            "mesa escritorio",
-            "suporte de monitor",
-            "suporte notebook",
-            "luminaria de mesa led",
-            "webcam",
-            "microfone",
-            "hub usb",
-            "adaptador hdmi",
-            "cabo usb c",
-            "carregador turbo",
-            "carregador wireless",
-            "power bank",
-            "ssd nvme",
-            "ssd externo",
-            "pendrive",
-            "cartao de memoria",
-            "placa de video",
-            "memoria ram",
-            "processador",
-            "gabinete gamer",
-            "fonte para pc",
-            "cooler para pc",
-            "roteador wifi",
-            "repetidor wifi",
-            "smart tv",
-            "fire tv stick",
-            "chromecast",
-            "console de videogame",
-            "controle joystick",
-            "smartwatch",
-            "tablet",
-            "notebook gamer",
-            "smartphone",
-            "impressora",
-            "camera de seguranca",
-            "drone",
+            "monitor gamer", "monitor ultrawide", "monitor 4k", "monitor 144hz",
+            "monitor 165hz", "monitor 180hz", "monitor 240hz", "monitor 360hz",
+            "monitor portátil", "monitor curvo", "teclado mecânico",
+            "teclado magnético", "teclado hall effect", "teclado gamer",
+            "mouse gamer", "mouse sem fio", "mouse ultraleve", "mousepad gamer",
+            "mousepad grande", "headset gamer", "headset sem fio", "fone bluetooth",
+            "fone tws", "microfone gamer", "microfone usb", "microfone sem fio",
+            "webcam", "webcam 2k", "webcam 4k", "controle gamer", "controle sem fio",
+            "controle hall effect", "controle xbox", "controle ps4", "controle ps5",
+            "controle pc", "volante gamer", "placa de vídeo", "placa de vídeo rtx",
+            "placa de vídeo rx", "placa mãe", "placa mãe am4", "placa mãe am5",
+            "processador amd", "processador intel", "ryzen 5", "ryzen 7", "ryzen 9",
+            "core i5", "core i7", "core i9", "memória ram", "memória ram ddr4",
+            "memória ram ddr5", "memória ram rgb", "ssd nvme", "ssd nvme gen3",
+            "ssd nvme gen4", "ssd nvme gen5", "ssd sata", "ssd externo", "hd externo",
+            "pendrive", "cartão de memória", "gabinete gamer", "gabinete aquário",
+            "gabinete mesh", "gabinete mini tower", "fonte pc", "fonte modular",
+            "fonte 80 plus", "water cooler", "water cooler 240mm", "water cooler 360mm",
+            "air cooler", "cooler processador", "fan rgb", "kit fans rgb",
+            "pasta térmica", "suporte de monitor", "suporte de notebook",
+            "suporte de headset", "suporte de controle", "mesa gamer", "escrivaninha",
+            "cadeira gamer", "cadeira escritório", "filtro de linha", "nobreak",
+            "estabilizador", "hub usb", "hub usb c", "adaptador usb",
+            "adaptador bluetooth", "adaptador wifi", "cabo hdmi", "cabo displayport",
+            "cabo usb c", "cabo ethernet", "carregador", "carregador turbo",
+            "carregador wireless", "power bank", "tomada inteligente", "roteador wifi",
+            "roteador gamer", "roteador mesh", "repetidor wifi", "switch de rede",
+            "placa wifi", "placa bluetooth", "smart tv", "smart tv 4k", "tv box",
+            "fire tv stick", "chromecast", "projetor", "mini projetor", "soundbar",
+            "caixa de som bluetooth", "caixa de som portátil", "smart speaker",
+            "console de videogame", "playstation 5", "xbox series", "nintendo switch",
+            "console portátil", "mini console", "acessórios para ps5",
+            "acessórios para xbox", "acessórios para nintendo switch", "celular",
+            "smartphone", "celular samsung", "celular xiaomi", "celular motorola",
+            "celular poco", "celular redmi", "tablet", "tablet samsung",
+            "tablet xiaomi", "tablet android", "notebook", "notebook gamer",
+            "notebook ryzen", "notebook intel", "notebook ultrafino", "mini pc",
+            "pc gamer", "computador desktop", "all in one", "impressora",
+            "impressora multifuncional", "impressora térmica", "impressora 3d",
+            "scanner", "mesa digitalizadora", "smartwatch", "smartband",
+            "câmera de segurança", "câmera wifi", "câmera ip",
+            "campainha inteligente", "fechadura inteligente", "lâmpada inteligente",
+            "fita led", "luminária led", "luminária rgb", "ring light", "tripé",
+            "suporte celular", "óculos vr", "action cam", "câmera esportiva",
+            "drone", "acessórios para celular", "capinha de celular",
+            "película celular", "carregador veicular", "suporte celular veicular",
+            "mochila para notebook", "mouse gamer sem fio", "teclado gamer sem fio",
+            "kit teclado e mouse", "kit upgrade pc", "kit ryzen", "kit xeon",
+            "kit memória ram", "kit ssd", "kit pc gamer", "placa de captura",
+            "capturadora de vídeo", "stream deck", "braço para microfone",
+            "braço para monitor", "organizador de cabos", "extensão elétrica",
         ])
     ).split(",")
     if termo.strip()
@@ -116,32 +112,6 @@ POST_INTERVAL_SEGUNDOS = int(os.getenv("POST_INTERVAL_SEGUNDOS", "30"))
 
 SHOPEE_VENDAS_MINIMAS = int(os.getenv("SHOPEE_VENDAS_MINIMAS", "1000"))
 SHOPEE_AVALIACAO_MINIMA = float(os.getenv("SHOPEE_AVALIACAO_MINIMA", "4.5"))
-
-# ---- Whitelist: só posta se o NOME do produto bater com termo de tech ----
-# Isso evita que a keyword de busca traga produto errado (ex: "capa" de outro nicho).
-# Pode sobrescrever via .env: TERMOS_TECH_PERMITIDOS separados por vírgula.
-TERMOS_TECH_PERMITIDOS = [
-    termo.strip()
-    for termo in os.getenv(
-        "TERMOS_TECH_PERMITIDOS",
-        ",".join([
-            "gamer", "gaming", "bluetooth", "wireless", "sem fio", "usb",
-            "usb-c", "type c", "wifi", "wi-fi", "led", "rgb", "smart",
-            "notebook", "laptop", "monitor", "teclado", "mouse", "mousepad",
-            "headset", "fone", "headphone", "earbud", "caixa de som",
-            "speaker", "cadeira", "mesa", "suporte", "webcam", "microfone",
-            "hub", "adaptador", "hdmi", "cabo", "carregador", "power bank",
-            "powerbank", "bateria portatil", "ssd", "hd externo", "hd 1tb",
-            "pendrive", "cartao de memoria", "placa de video", "placa mae",
-            "memoria ram", "processador", "gabinete", "fonte atx", "cooler",
-            "roteador", "repetidor", "smart tv", "fire tv", "chromecast",
-            "console", "joystick", "controle", "smartwatch", "relogio inteligente",
-            "tablet", "smartphone", "celular", "impressora", "camera",
-            "drone", "eletronico", "eletronicos", "gadget", "setup",
-        ])
-    ).split(",")
-    if termo.strip()
-]
 
 SHOPEE_BUSCA_BRUTA = int(os.getenv("SHOPEE_BUSCA_BRUTA", "50"))
 SHOPEE_INTERVALO_PAGINAS = float(
@@ -173,16 +143,10 @@ def checar_configuracao():
     faltando = [k for k, v in obrigatorias.items() if not v]
 
     if faltando:
-        print(f"[DEBUG] Variáveis obrigatórias faltando: {faltando}", flush=True)
         sys.exit(1)
 
     if WHATSAPP_ENABLED and not WHATSAPP_GROUP_ID:
-        print("[DEBUG] WHATSAPP_ENABLED=true mas WHATSAPP_GROUP_ID está vazio.", flush=True)
         sys.exit(1)
-
-    print("[DEBUG] Configuração OK. Keywords carregadas:", len(SHOPEE_SEARCH_KEYWORDS), flush=True)
-    print("[DEBUG] Termos tech carregados:", len(TERMOS_TECH_PERMITIDOS), flush=True)
-    print(f"[DEBUG] SHOPEE_PRODUCT_LIMIT={SHOPEE_PRODUCT_LIMIT} SHOPEE_VENDAS_MINIMAS={SHOPEE_VENDAS_MINIMAS} SHOPEE_AVALIACAO_MINIMA={SHOPEE_AVALIACAO_MINIMA}", flush=True)
 
     global supabase
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -231,8 +195,6 @@ def carregar_historico_supabase():
             break
 
         inicio += tamanho
-
-    print(f"[DEBUG] Histórico carregado do Supabase: {len(postados_cache)} produtos já postados.", flush=True)
 
 
 def salvar_produto_postado(produto: dict):
@@ -356,32 +318,9 @@ def buscar_pagina(keyword: str, pagina: int):
     )
 
 
-def normalizar_texto(texto) -> str:
-    """Minúsculas + sem acentos, para o filtro pegar variações do título."""
-    texto = str(texto or "").lower()
-    texto = unicodedata.normalize("NFD", texto)
-    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
-    texto = re.sub(r"[^a-z0-9]+", " ", texto)
-    return f" {texto.strip()} "
-
-
-def produto_e_tech(produto: dict) -> bool:
-    """Whitelist: só é aprovado se o nome bater com algum termo de tech/setup."""
-    nome = normalizar_texto(produto.get("productName", ""))
-
-    for termo in TERMOS_TECH_PERMITIDOS:
-        termo_normalizado = normalizar_texto(termo).strip()
-        if termo_normalizado and termo_normalizado in nome:
-            return True
-
-    return False
-
-
 def produto_passou_filtro(produto: dict) -> bool:
-    # Só passa se for claramente um produto de tech/setup.
-    if not produto_e_tech(produto):
-        return False
-
+    # Sem whitelist de nome: o filtro de nicho já é feito pelas próprias
+    # keywords de busca (SHOPEE_SEARCH_KEYWORDS). Aqui só checa vendas/nota.
     try:
         vendas = float(produto.get("sales") or 0)
         avaliacao = float(produto.get("ratingStar") or 0)
@@ -494,11 +433,9 @@ def processar_produto(produto: dict) -> bool:
         )
 
         salvar_produto_postado(produto)
-        print(f"[DEBUG] POSTADO: {produto.get('productName')}", flush=True)
         return True
 
-    except Exception as e:
-        print(f"[DEBUG] ERRO ao enviar/salvar produto '{produto.get('productName')}': {e}", flush=True)
+    except Exception:
         return False
 
 
@@ -512,49 +449,36 @@ def rodar_uma_vez():
     postados_nesta_rodada = 0
 
     if not SHOPEE_SEARCH_KEYWORDS:
-        print("[DEBUG] Lista de keywords está vazia!", flush=True)
         return
 
     for keyword in SHOPEE_SEARCH_KEYWORDS:
         pagina = 1
-        print(f"[DEBUG] === Buscando keyword: '{keyword}' ===", flush=True)
 
         while True:
             try:
                 produtos, page_info = buscar_pagina(keyword, pagina)
-            except Exception as e:
-                print(f"[DEBUG] ERRO na busca (keyword='{keyword}', pagina={pagina}): {e}", flush=True)
+            except Exception:
                 break  # tenta a próxima keyword
-
-            print(f"[DEBUG] keyword='{keyword}' pagina={pagina}: {len(produtos)} produtos retornados pela Shopee", flush=True)
 
             if not produtos:
                 break
-
-            passaram_filtro = 0
-            ja_postados = 0
 
             for produto in produtos:
                 if not produto_passou_filtro(produto):
                     continue
 
-                passaram_filtro += 1
                 produto_id = id_do_produto(produto)
 
                 if produto_id in postados_cache:
-                    ja_postados += 1
                     continue
 
                 if processar_produto(produto):
                     postados_nesta_rodada += 1
 
                     if postados_nesta_rodada >= limite_posts:
-                        print(f"[DEBUG] Limite de {limite_posts} posts atingido nesta rodada.", flush=True)
                         return
 
                     time.sleep(2)
-
-            print(f"[DEBUG] keyword='{keyword}' pagina={pagina}: {passaram_filtro} passaram no filtro tech, {ja_postados} já tinham sido postados antes", flush=True)
 
             if not page_info.get("hasNextPage"):
                 break
@@ -565,17 +489,14 @@ def rodar_uma_vez():
         # pequena pausa entre uma keyword e outra
         time.sleep(SHOPEE_INTERVALO_KEYWORDS)
 
-    print(f"[DEBUG] Rodada finalizada. Total postado nesta rodada: {postados_nesta_rodada}", flush=True)
-
 
 def rodar_continuamente():
     while True:
         try:
             rodar_uma_vez()
-        except Exception as e:
-            print(f"[DEBUG] ERRO inesperado em rodar_uma_vez: {e}", flush=True)
+        except Exception:
+            pass
 
-        print(f"[DEBUG] Aguardando {POST_INTERVAL_SEGUNDOS}s até a próxima rodada...", flush=True)
         time.sleep(max(POST_INTERVAL_SEGUNDOS, 1))
 
 
