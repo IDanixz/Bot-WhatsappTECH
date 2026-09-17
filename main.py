@@ -1,5 +1,5 @@
 """
-Bot Shopee -> Telegram + Supabase (versão otimizada)
+Bot Shopee -> WhatsApp + Supabase (versão otimizada)
 ----------------------------------------------------
 - Busca geral/relevância da Shopee.
 - Filtra: >= 1000 vendas e >= 4.5 estrelas.
@@ -10,14 +10,12 @@ Bot Shopee -> Telegram + Supabase (versão otimizada)
 """
 
 import os
-import random
 import sys
 import json
 import time
-import html
 import hashlib
-import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import re
+import unicodedata
 
 import requests
 from dotenv import load_dotenv
@@ -35,66 +33,36 @@ SHOPEE_API_URL = os.getenv(
     "https://open-api.affiliate.shopee.com.br/graphql"
 )
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
-TELEGRAM_CHANNEL_NAME = os.getenv("TELEGRAM_CHANNEL_NAME", "")
-TELEGRAM_CHANNEL_LINK = os.getenv("TELEGRAM_CHANNEL_LINK", "")
+WHATSAPP_ENABLED = os.getenv("WHATSAPP_ENABLED", "true").lower() == "true"
+WHATSAPP_CHANNEL_NAME = os.getenv("WHATSAPP_CHANNEL_NAME", "Divulga Promos")
+WHATSAPP_CHANNEL_LINK = os.getenv("WHATSAPP_CHANNEL_LINK", "")
+# O Node usa a mesma PORT fornecida pelo Render.
+# Se WHATSAPP_SERVICE_URL não for definida, o Python fala com o Node
+# pela porta interna do próprio processo/container.
+RENDER_PORT = os.getenv("PORT", "3333")
+WHATSAPP_SERVICE_URL = os.getenv(
+    "WHATSAPP_SERVICE_URL",
+    f"http://127.0.0.1:{RENDER_PORT}"
+).rstrip("/")
+WHATSAPP_GROUP_ID = os.getenv("WHATSAPP_GROUP_ID", "")
 
-# Nicho 100% TECH / SETUP.
-#
-# Peso da busca:
-#   80 = categorias principais do setup/PC (aparecem mais)
-#   50 = categorias secundárias (aparecem normalmente)
-#
-# O sorteio ponderado faz o bot procurar mais vezes o que costuma ter
-# maior procura em um canal de setup, sem abandonar as outras categorias.
-TECH_KEYWORDS = [
-    # PRINCIPAIS — peso 80
-    ("teclado mecânico", 80),
-    ("mouse gamer", 80),
-    ("mousepad", 80),
-    ("microfone USB", 80),
-    ("controle gamer", 80),
-    ("mesa gamer", 80),
-    ("SSD", 80),
-    ("memória RAM", 80),
-    ("cooler para PC", 80),
-    ("ventoinha RGB", 80),
-    ("placa de vídeo", 80),
-    ("processador", 80),
-    ("fonte para PC", 80),
-    ("gabinete PC", 80),
-
-    # SECUNDÁRIAS — peso 50
-    ("deskmat", 50),
-    ("headset gamer", 50),
-    ("fone bluetooth", 50),
-    ("webcam", 50),
-    ("monitor gamer", 50),
-    ("suporte para monitor", 50),
-    ("braço articulado monitor", 50),
-    ("suporte para notebook", 50),
-    ("hub USB", 50),
-    ("adaptador USB", 50),
-    ("carregador rápido", 50),
-    ("cabo USB", 50),
-    ("caixa de som bluetooth", 50),
-    ("luminária de mesa", 50),
-    ("luz RGB", 50),
-    ("fita LED RGB", 50),
-    ("organizador de cabos", 50),
-    ("suporte para celular mesa", 50),
-    ("cadeira gamer", 50),
-    ("acessórios para setup", 50),
-    ("eletrônicos", 50),
-]
-SHOPEE_SEARCH_KEYWORD = os.getenv("SHOPEE_SEARCH_KEYWORD", "").strip()
-TECH_KEYWORD_INDEX = int(os.getenv("TECH_KEYWORD_INDEX", "0"))
+SHOPEE_SEARCH_KEYWORD = os.getenv("SHOPEE_SEARCH_KEYWORD", "")
 SHOPEE_PRODUCT_LIMIT = int(os.getenv("SHOPEE_PRODUCT_LIMIT", "5"))
 POST_INTERVAL_SEGUNDOS = int(os.getenv("POST_INTERVAL_SEGUNDOS", "30"))
 
 SHOPEE_VENDAS_MINIMAS = int(os.getenv("SHOPEE_VENDAS_MINIMAS", "1000"))
 SHOPEE_AVALIACAO_MINIMA = float(os.getenv("SHOPEE_AVALIACAO_MINIMA", "4.5"))
+
+# Bloqueia roupas e peças exclusivamente femininas. Moda masculina continua liberada.
+# Os termos podem ser alterados no .env sem mexer no código.
+TERMOS_BLOQUEADOS_FEMININOS = [
+    termo.strip()
+    for termo in os.getenv(
+        "TERMOS_BLOQUEADOS_FEMININOS",
+        "roupa feminina,moda feminina,biquini,bikini,maio,maiô,top feminino,top cropped,cropped,sutia,sutiã,lingerie,calcinha,calcinhas,camisola,pijama feminino,vestido,vestidos,saia,saias,short feminino,shorts feminino,body feminino,body feminino,conjunto feminino,conjuntos femininos,macacao feminino,macacão feminino,blusa feminina,blusas femininas,camisa feminina,camiseta feminina,regata feminina,legging feminina,calca feminina,calça feminina,jeans feminino,moda intima feminina,moda íntima feminina,roupa intima feminina,roupa íntima feminina,conjunto intimo feminino,conjunto íntimo feminino,roupa sensual feminina"
+    ).split(",")
+    if termo.strip()
+]
 
 # Quantos produtos pedir por página.
 # 50 é um bom equilíbrio entre velocidade e carga na API.
@@ -122,8 +90,6 @@ def checar_configuracao():
     obrigatorias = {
         "SHOPEE_APP_ID": SHOPEE_APP_ID,
         "SHOPEE_SECRET": SHOPEE_SECRET,
-        "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
-        "TELEGRAM_CHANNEL_ID": TELEGRAM_CHANNEL_ID,
         "SUPABASE_URL": SUPABASE_URL,
         "SUPABASE_KEY": SUPABASE_KEY,
     }
@@ -131,15 +97,13 @@ def checar_configuracao():
     faltando = [k for k, v in obrigatorias.items() if not v]
 
     if faltando:
-        print("Faltam configurar estas variáveis:")
-        for nome in faltando:
-            print(f"  - {nome}")
+        sys.exit(1)
+
+    if WHATSAPP_ENABLED and not WHATSAPP_GROUP_ID:
         sys.exit(1)
 
     global supabase
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print("Supabase conectado com sucesso.")
-    print("🚀 Bot configurado para o nicho TECH / SETUP.")
 
 
 # ===================== SUPABASE =====================
@@ -167,7 +131,6 @@ def carregar_historico_supabase():
 
     inicio = 0
     tamanho = 1000
-    total = 0
 
     while True:
         resposta = (
@@ -185,14 +148,10 @@ def carregar_historico_supabase():
             if produto_id:
                 postados_cache.add(str(produto_id))
 
-        total += len(linhas)
-
         if len(linhas) < tamanho:
             break
 
         inicio += tamanho
-
-    print(f"Histórico carregado do Supabase: {total} produtos.")
 
 
 def salvar_produto_postado(produto: dict):
@@ -210,7 +169,6 @@ def salvar_produto_postado(produto: dict):
         }).execute()
 
         postados_cache.add(produto_id)
-        print(f"Salvo no Supabase: {produto_id}")
 
     except Exception as e:
         texto = str(e).lower()
@@ -222,7 +180,6 @@ def salvar_produto_postado(produto: dict):
             or "23505" in texto
         ):
             postados_cache.add(produto_id)
-            print(f"Produto já estava salvo no Supabase: {produto_id}")
         else:
             raise
 
@@ -272,16 +229,8 @@ def buscar_pagina(pagina: int):
     """Busca UMA página. Assim podemos filtrar/postar antes da próxima."""
     limite = min(max(SHOPEE_BUSCA_BRUTA, 1), 500)
 
-    if SHOPEE_SEARCH_KEYWORD:
-        palavra_busca = SHOPEE_SEARCH_KEYWORD
-    else:
-        # Sorteio ponderado: peso 80 aparece mais que peso 50.
-        palavras = [item[0] for item in TECH_KEYWORDS]
-        pesos = [item[1] for item in TECH_KEYWORDS]
-        palavra_busca = random.choices(palavras, weights=pesos, k=1)[0]
-
     variables = {
-        "keyword": palavra_busca,
+        "keyword": SHOPEE_SEARCH_KEYWORD or None,
         "page": pagina,
         "limit": limite,
         "sortType": 1,  # relevância / busca geral
@@ -331,7 +280,33 @@ def buscar_pagina(pagina: int):
     )
 
 
+def normalizar_texto(texto) -> str:
+    """Minúsculas + sem acentos, para o filtro pegar variações do título."""
+    texto = str(texto or "").lower()
+    texto = unicodedata.normalize("NFD", texto)
+    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    texto = re.sub(r"[^a-z0-9]+", " ", texto)
+    return f" {texto.strip()} "
+
+
+def produto_e_feminino_bloqueado(produto: dict) -> bool:
+    """Retorna True para roupas/peças femininas que não devem ser postadas."""
+    nome = normalizar_texto(produto.get("productName", ""))
+
+    for termo in TERMOS_BLOQUEADOS_FEMININOS:
+        termo_normalizado = normalizar_texto(termo).strip()
+        if termo_normalizado and termo_normalizado in nome:
+            return True
+
+    return False
+
+
 def produto_passou_filtro(produto: dict) -> bool:
+    # Primeiro remove roupas e peças femininas, inclusive biquíni, sutiã,
+    # calcinha, camisola, vestido, saia, cropped e outras variações configuradas.
+    if produto_e_feminino_bloqueado(produto):
+        return False
+
     try:
         vendas = float(produto.get("sales") or 0)
         avaliacao = float(produto.get("ratingStar") or 0)
@@ -344,7 +319,7 @@ def produto_passou_filtro(produto: dict) -> bool:
     )
 
 
-# ===================== TELEGRAM =====================
+# ===================== FORMATAÇÃO =====================
 
 def _para_float(valor, padrao=0.0):
     try:
@@ -358,19 +333,8 @@ def formatar_valor_brl(valor: float) -> str:
 
 
 def calcular_precos(produto: dict):
-    """
-    Retorna (preco_atual, preco_original, percentual_desconto).
-
-    priceMin/priceMax já vêm com o desconto aplicado.
-    priceDiscountRate é a taxa de desconto (%) fornecida pela própria Shopee.
-    O preço "original" é calculado a partir disso: original = atual / (1 - taxa/100)
-    """
-    preco_atual = _para_float(
-        produto.get("priceMin") or produto.get("priceMax") or 0
-    )
-
+    preco_atual = _para_float(produto.get("priceMin") or produto.get("priceMax") or 0)
     taxa_desconto = _para_float(produto.get("priceDiscountRate"))
-
     preco_original = None
     percentual = 0
 
@@ -380,173 +344,92 @@ def calcular_precos(produto: dict):
 
     return preco_atual, preco_original, percentual
 
+# ===================== WHATSAPP (via serviço Node.js/Baileys) =====================
 
-def formatar_preco(produto: dict) -> str:
-    preco_atual, _, _ = calcular_precos(produto)
-    return formatar_valor_brl(preco_atual)
-
-
-def formatar_bloco_preco(produto: dict) -> str:
-    """
-    Monta o bloco de preço para a mensagem do Telegram (HTML).
-    Se houver desconto real informado pela Shopee, mostra o preço
-    original riscado, o selo de % OFF e o preço final (já com o desconto).
-    """
+def formatar_bloco_preco_texto(produto: dict) -> str:
     preco_atual, preco_original, percentual = calcular_precos(produto)
     preco_atual_fmt = formatar_valor_brl(preco_atual)
 
     if preco_original and percentual > 0:
         preco_original_fmt = formatar_valor_brl(preco_original)
         return (
-            f"<s>{preco_original_fmt}</s> 🏷️ -{percentual}% OFF\n"
-            f"💵 <b>{preco_atual_fmt}</b>"
+            f"~{preco_original_fmt}~ 🏷️ -{percentual}% OFF\n"
+            f"💵 *{preco_atual_fmt}*"
         )
 
-    return f"💵 {preco_atual_fmt}"
+    return f"💵 *{preco_atual_fmt}*"
 
 
-def formatar_mensagem(produto: dict) -> str:
-    nome = html.escape(produto.get("productName", "Produto"))
-    bloco_preco = formatar_bloco_preco(produto)
-    link = html.escape(produto.get("offerLink", ""), quote=False)
-    nome_canal = html.escape(TELEGRAM_CHANNEL_NAME)
-    link_canal = html.escape(TELEGRAM_CHANNEL_LINK, quote=False)
+def formatar_mensagem_whatsapp(produto: dict) -> str:
+    nome = produto.get("productName", "Produto")
+    bloco_preco = formatar_bloco_preco_texto(produto)
+    link = produto.get("offerLink", "")
 
-    return (
-        f"🖥️ <b>{nome}</b>\n\n"
-        f"{bloco_preco}\n\n"
-        f"🔗 {link}\n\n"
-        f"{nome_canal}\n"
-        f"{link_canal}\n\n"
-        f"#Tech #Setup #Tecnologia #Ofertas #Shopee"
-    )
+    partes = [
+        f"🔥 *{nome}*",
+        bloco_preco,
+        f"🔗 {link}",
+    ]
 
-def enviar_telegram(mensagem: str, imagem_url: str = None):
-    if imagem_url:
-        url = (
-            f"https://api.telegram.org/"
-            f"bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-        )
+    if WHATSAPP_CHANNEL_NAME:
+        partes.append(WHATSAPP_CHANNEL_NAME)
+    if WHATSAPP_CHANNEL_LINK:
+        partes.append(WHATSAPP_CHANNEL_LINK)
 
-        payload = {
-            "chat_id": TELEGRAM_CHANNEL_ID,
-            "photo": imagem_url,
-            "caption": mensagem,
-            "parse_mode": "HTML",
-        }
-    else:
-        url = (
-            f"https://api.telegram.org/"
-            f"bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        )
+    partes.append("#Anuncio #DivulgaPromos")
+    return "\n\n".join(partes)
 
-        payload = {
-            "chat_id": TELEGRAM_CHANNEL_ID,
-            "text": mensagem,
-            "parse_mode": "HTML",
-        }
+
+def enviar_whatsapp(mensagem: str, image_url: str = ""):
+    url = f"{WHATSAPP_SERVICE_URL}/send"
 
     resposta = requests.post(
         url,
-        data=payload,
-        timeout=30,
+        json={
+            "group_id": WHATSAPP_GROUP_ID,
+            "message": mensagem,
+            "image_url": image_url or "",
+        },
+        timeout=60,
     )
-
     resposta.raise_for_status()
     return resposta.json()
 
 
 # ===================== RENDER / UPTIMEROBOT =====================
-
-class HealthHandler(BaseHTTPRequestHandler):
-
-    def _responder_ok(self, corpo=True):
-        body = b"ShopeeBot OK"
-
-        self.send_response(200)
-        self.send_header(
-            "Content-Type",
-            "text/plain; charset=utf-8"
-        )
-        self.send_header(
-            "Content-Length",
-            str(len(body))
-        )
-        self.end_headers()
-
-        if corpo:
-            self.wfile.write(body)
-
-    def do_GET(self):
-        self._responder_ok(True)
-
-    def do_HEAD(self):
-        self._responder_ok(False)
-
-    def log_message(self, format, *args):
-        return
-
-
-def iniciar_servidor_http():
-    porta = int(os.getenv("PORT", "10000"))
-
-    servidor = ThreadingHTTPServer(
-        ("0.0.0.0", porta),
-        HealthHandler,
-    )
-
-    thread = threading.Thread(
-        target=servidor.serve_forever,
-        daemon=True,
-    )
-
-    thread.start()
-
-    print(
-        f"Servidor HTTP ativo na porta {porta} "
-        f"(health check: /)"
-    )
-
-    return servidor
+#
+# O health check e o QR code agora são servidos pelo server.js (Node),
+# que já ocupa a porta $PORT do Render. Manter um segundo servidor HTTP
+# aqui no Python causava "Address already in use" e crashava o serviço.
 
 
 # ===================== PROCESSAMENTO OTIMIZADO =====================
 
 def processar_produto(produto: dict) -> bool:
-    """
-    Tenta postar UM produto.
-    Retorna True se postou com sucesso.
-    """
+    """Tenta enviar UM produto para o WhatsApp."""
     produto_id = id_do_produto(produto)
 
-    # Primeiro verifica o cache em memória.
     if produto_id in postados_cache:
         return False
 
     if not produto_passou_filtro(produto):
         return False
 
-    nome = produto.get("productName", "Produto")
-
     try:
-        enviar_telegram(
-            formatar_mensagem(produto),
-            produto.get("imageUrl"),
+        if not WHATSAPP_ENABLED:
+            return False
+
+        enviar_whatsapp(
+            formatar_mensagem_whatsapp(produto),
+            produto.get("imageUrl") or "",
         )
 
-        # Só registra depois do Telegram confirmar o envio.
+        # Só registra depois que o WhatsApp confirmou o envio.
         salvar_produto_postado(produto)
-
-        print(
-            f"✅ Postado: {nome} | "
-            f"vendas={produto.get('sales')} | "
-            f"avaliação={produto.get('ratingStar')}"
-        )
 
         return True
 
-    except Exception as e:
-        print(f"❌ Erro ao postar '{nome}': {e}")
+    except Exception:
         return False
 
 
@@ -562,19 +445,6 @@ def rodar_uma_vez():
 
     Para cada rodada, para ao atingir SHOPEE_PRODUCT_LIMIT.
     """
-    if SHOPEE_SEARCH_KEYWORD:
-        palavra_busca = SHOPEE_SEARCH_KEYWORD
-    else:
-        # Sorteio ponderado: peso 80 aparece mais que peso 50.
-        palavras = [item[0] for item in TECH_KEYWORDS]
-        pesos = [item[1] for item in TECH_KEYWORDS]
-        palavra_busca = random.choices(palavras, weights=pesos, k=1)[0]
-
-    print(
-        f"🔎 Buscando TECH: {palavra_busca} "
-        "(página por página)..."
-    )
-
     limite_posts = max(SHOPEE_PRODUCT_LIMIT, 1)
     postados_nesta_rodada = 0
     pagina = 1
@@ -582,54 +452,32 @@ def rodar_uma_vez():
     while True:
         try:
             produtos, page_info = buscar_pagina(pagina)
-        except Exception as e:
-            print(f"Erro ao buscar página {pagina}: {e}")
+        except Exception:
             return
 
-        print(
-            f"Página {pagina}: {len(produtos)} produtos encontrados"
-        )
-
         if not produtos:
-            print("A Shopee não retornou mais produtos.")
             break
-
-        validos = 0
-        novos = 0
 
         for produto in produtos:
             if not produto_passou_filtro(produto):
                 continue
 
-            validos += 1
             produto_id = id_do_produto(produto)
 
             if produto_id in postados_cache:
                 continue
-
-            novos += 1
 
             # POSTA IMEDIATAMENTE.
             if processar_produto(produto):
                 postados_nesta_rodada += 1
 
                 if postados_nesta_rodada >= limite_posts:
-                    print(
-                        f"Limite da rodada atingido: "
-                        f"{postados_nesta_rodada} produto(s)."
-                    )
                     return
 
-                # Pequena pausa entre posts para não floodar Telegram.
+                # Pequena pausa entre posts para evitar flood.
                 time.sleep(2)
 
-        print(
-            f"Página {pagina}: {validos} passaram no filtro, "
-            f"{novos} eram novos."
-        )
-
         if not page_info.get("hasNextPage"):
-            print("Fim das páginas disponíveis nesta busca.")
             break
 
         pagina += 1
@@ -637,28 +485,13 @@ def rodar_uma_vez():
         # Pequena pausa para respeitar a API.
         time.sleep(SHOPEE_INTERVALO_PAGINAS)
 
-    if postados_nesta_rodada == 0:
-        print("Nenhum produto novo encontrado nesta rodada.")
-
 
 def rodar_continuamente():
-    global TECH_KEYWORD_INDEX
-
     while True:
-        inicio = time.time()
-
         try:
             rodar_uma_vez()
-            # A próxima rodada faz um novo sorteio ponderado.
-        except Exception as e:
-            print(f"Erro no ciclo de postagem: {e}")
-
-        duracao = time.time() - inicio
-
-        print(
-            f"Rodada terminada em {duracao:.1f}s. "
-            f"Aguardando {POST_INTERVAL_SEGUNDOS}s..."
-        )
+        except Exception:
+            pass
 
         time.sleep(max(POST_INTERVAL_SEGUNDOS, 1))
 
@@ -668,7 +501,6 @@ def rodar_continuamente():
 if __name__ == "__main__":
     checar_configuracao()
     carregar_historico_supabase()
-    iniciar_servidor_http()
 
     if "--loop" in sys.argv:
         rodar_continuamente()

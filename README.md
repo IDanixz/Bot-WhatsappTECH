@@ -1,132 +1,20 @@
-# 🤖 Tech Setup Bot — Shopee → Telegram
+# DivulgaPromos — Shopee → WhatsApp
 
-Bot de ofertas focado **100% em tecnologia e setup**.
+Este projeto busca promoções pela API da Shopee, filtra os produtos e envia somente para o WhatsApp.
 
-Ele procura automaticamente produtos como:
+## Como iniciar
 
-- ⌨️ Teclados mecânicos
-- 🖱️ Mouses e mousepads
-- 🎧 Headsets e fones
-- 🎙️ Microfones e webcams
-- 🖥️ Monitores e suportes
-- 💡 RGB, LEDs e iluminação
-- 🪑 Mesas e cadeiras para setup
-- 🔌 Hubs, cabos, carregadores e adaptadores
-- 💻 Suportes para notebook e celular
-- 🖥️ Componentes de PC
-- 🎮 Controles e acessórios
-- 📱 Eletrônicos em geral relacionados ao setup
+1. Copie `.env.example` para `.env` e preencha suas credenciais.
+2. No terminal 1: `npm install` e depois `npm start`.
+3. No terminal 2: `python -m pip install -r requirements.txt` e depois `python main.py --loop`.
 
-## Como funciona
+O WhatsApp precisa estar conectado e o `WHATSAPP_GROUP_ID` configurado.
 
-Se `SHOPEE_SEARCH_KEYWORD` ficar vazio, o bot alterna automaticamente entre várias buscas TECH a cada rodada.
 
-Exemplo:
-
-`teclado mecânico` → `mouse gamer` → `mousepad` → `monitor gamer` → `microfone USB` → ...
-
-Assim o canal não fica preso a uma única categoria.
-
-## 1. Instalação
-
-```bash
-pip install -r requirements.txt
-```
-
-## 2. Configure o `.env`
-
-Preencha:
-
-```env
-SHOPEE_APP_ID=
-SHOPEE_SECRET=
-SHOPEE_AFFILIATE_ID=
-
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_CHANNEL_ID=
-TELEGRAM_CHANNEL_NAME=💻 Tech Setup
-TELEGRAM_CHANNEL_LINK=
-
-SUPABASE_URL=
-SUPABASE_KEY=
-```
-
-Para usar somente uma categoria, coloque uma palavra em:
-
-```env
-SHOPEE_SEARCH_KEYWORD=teclado mecânico
-```
-
-Para voltar ao modo automático de TECH, deixe vazio.
-
-## 3. Filtros
-
-O padrão foi ajustado para o nicho TECH:
-
-```env
-SHOPEE_VENDAS_MINIMAS=100
-SHOPEE_AVALIACAO_MINIMA=4.5
-SHOPEE_BUSCA_BRUTA=50
-SHOPEE_PRODUCT_LIMIT=1
-```
-
-O limite de 100 vendas ajuda a encontrar mais produtos de tecnologia do que o antigo limite de 1000.
-
-## 4. Rodar
-
-Uma rodada:
-
-```bash
-python main.py
-```
-
-Modo contínuo:
-
-```bash
-python main.py --loop
-```
-
-O bot posta no Telegram e registra os produtos no Supabase para evitar repetição.
-
-## 5. Supabase
-
-A tabela usada continua sendo:
-
-```sql
-create table public.produtos_postados (
-    id bigint generated always as identity primary key,
-    produto_id text unique not null,
-    link text,
-    criado_em timestamptz default now()
-);
-```
-
-## 6. Segurança
-
-O `.env` deste pacote foi deixado sem credenciais.
-
-**Importante:** as credenciais que estavam no ZIP enviado anteriormente ficaram expostas no arquivo/conversa. Por segurança, gere novas credenciais na Shopee, Telegram e Supabase e coloque somente as novas no `.env`.
-
-Nunca publique `.env` no GitHub.
-
-## Estrutura
-
-```text
-ShopeeBot/
-├── main.py
-├── requirements.txt
-├── .env
-├── .gitignore
-├── produtos_postados.json
-└── README.md
-```
+## Fotos no WhatsApp
+As promoções agora enviam `imageUrl` retornada pela API da Shopee como foto, com a mensagem da promoção na legenda. Se a Shopee não retornar imagem para um produto, a mensagem será enviada apenas como texto.
 
 ## Render
 
-Start Command:
-
-```bash
-python main.py --loop
-```
-
-Configure as variáveis do `.env` nas Environment Variables do Render.
+O projeto inclui `Dockerfile`, `render.yaml` e `CONFIGURAR_NO_RENDER.md`.
+O Node é o único processo que escuta a porta `$PORT` do Render; o Python chama o Node localmente pela mesma porta. Não configure `WHATSAPP_SERVICE_URL` com `localhost:3333` no Render.

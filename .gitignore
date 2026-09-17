@@ -1,4 +1,10 @@
 .env
+auth_info_baileys/
+node_modules/
 __pycache__/
 *.pyc
-produtos_postados.json
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Backup/arquivos temporários da sessão
+*.backup.gz
