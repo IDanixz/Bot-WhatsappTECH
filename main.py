@@ -143,10 +143,15 @@ def checar_configuracao():
     faltando = [k for k, v in obrigatorias.items() if not v]
 
     if faltando:
+        print(f"[DEBUG] Variáveis obrigatórias faltando: {faltando}", flush=True)
         sys.exit(1)
 
     if WHATSAPP_ENABLED and not WHATSAPP_GROUP_ID:
+        print("[DEBUG] WHATSAPP_ENABLED=true mas WHATSAPP_GROUP_ID está vazio.", flush=True)
         sys.exit(1)
+
+    print(f"[DEBUG] Configuração OK. Keywords carregadas: {len(SHOPEE_SEARCH_KEYWORDS)}", flush=True)
+    print(f"[DEBUG] SHOPEE_PRODUCT_LIMIT={SHOPEE_PRODUCT_LIMIT} SHOPEE_VENDAS_MINIMAS={SHOPEE_VENDAS_MINIMAS} SHOPEE_AVALIACAO_MINIMA={SHOPEE_AVALIACAO_MINIMA}", flush=True)
 
     global supabase
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -195,6 +200,8 @@ def carregar_historico_supabase():
             break
 
         inicio += tamanho
+
+    print(f"[DEBUG] Histórico carregado do Supabase: {len(postados_cache)} produtos já postados.", flush=True)
 
 
 def salvar_produto_postado(produto: dict):
@@ -433,9 +440,11 @@ def processar_produto(produto: dict) -> bool:
         )
 
         salvar_produto_postado(produto)
+        print(f"[DEBUG] POSTADO: {produto.get('productName')}", flush=True)
         return True
 
-    except Exception:
+    except Exception as e:
+        print(f"[DEBUG] ERRO ao enviar/salvar produto '{produto.get('productName')}': {e}", flush=True)
         return False
 
 
@@ -449,36 +458,49 @@ def rodar_uma_vez():
     postados_nesta_rodada = 0
 
     if not SHOPEE_SEARCH_KEYWORDS:
+        print("[DEBUG] Lista de keywords está vazia!", flush=True)
         return
 
     for keyword in SHOPEE_SEARCH_KEYWORDS:
         pagina = 1
+        print(f"[DEBUG] === Buscando keyword: '{keyword}' ===", flush=True)
 
         while True:
             try:
                 produtos, page_info = buscar_pagina(keyword, pagina)
-            except Exception:
+            except Exception as e:
+                print(f"[DEBUG] ERRO na busca (keyword='{keyword}', pagina={pagina}): {e}", flush=True)
                 break  # tenta a próxima keyword
+
+            print(f"[DEBUG] keyword='{keyword}' pagina={pagina}: {len(produtos)} produtos retornados pela Shopee", flush=True)
 
             if not produtos:
                 break
+
+            passaram_filtro = 0
+            ja_postados = 0
 
             for produto in produtos:
                 if not produto_passou_filtro(produto):
                     continue
 
+                passaram_filtro += 1
                 produto_id = id_do_produto(produto)
 
                 if produto_id in postados_cache:
+                    ja_postados += 1
                     continue
 
                 if processar_produto(produto):
                     postados_nesta_rodada += 1
 
                     if postados_nesta_rodada >= limite_posts:
+                        print(f"[DEBUG] Limite de {limite_posts} posts atingido nesta rodada.", flush=True)
                         return
 
                     time.sleep(2)
+
+            print(f"[DEBUG] keyword='{keyword}' pagina={pagina}: {passaram_filtro} passaram no filtro (vendas/nota), {ja_postados} já tinham sido postados antes", flush=True)
 
             if not page_info.get("hasNextPage"):
                 break
@@ -489,14 +511,17 @@ def rodar_uma_vez():
         # pequena pausa entre uma keyword e outra
         time.sleep(SHOPEE_INTERVALO_KEYWORDS)
 
+    print(f"[DEBUG] Rodada finalizada. Total postado nesta rodada: {postados_nesta_rodada}", flush=True)
+
 
 def rodar_continuamente():
     while True:
         try:
             rodar_uma_vez()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[DEBUG] ERRO inesperado em rodar_uma_vez: {e}", flush=True)
 
+        print(f"[DEBUG] Aguardando {POST_INTERVAL_SEGUNDOS}s até a próxima rodada...", flush=True)
         time.sleep(max(POST_INTERVAL_SEGUNDOS, 1))
 
 
@@ -507,6 +532,9 @@ if __name__ == "__main__":
     carregar_historico_supabase()
 
     if "--loop" in sys.argv:
+        print("[DEBUG] Rodando em modo --loop (contínuo).", flush=True)
         rodar_continuamente()
     else:
+        print("[DEBUG] Rodando UMA VEZ (sem --loop). Confira o start.sh se quiser loop.", flush=True)
         rodar_uma_vez()
+        print("[DEBUG] Execução única finalizada.", flush=True)
