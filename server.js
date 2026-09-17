@@ -32,6 +32,7 @@ let conectado = false;
 let backupTimer = null;
 let backupInProgress = false;
 let ultimoQR = null;
+let numeroConectado = null;
 
 function supabaseConfigurado() {
   return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
@@ -71,8 +72,6 @@ async function restaurarSessaoDoSupabase() {
       }
     });
 
-    // O Supabase Storage pode retornar 404 ou 400/NoSuchKey
-    // quando o arquivo ainda não existe.
     if (!response.ok) {
       const text = await response.text();
 
@@ -124,8 +123,6 @@ async function restaurarSessaoDoSupabase() {
     return true;
 
   } catch (error) {
-    // Se o arquivo simplesmente ainda não existe,
-    // não deve derrubar o serviço.
     if (
       error.message.includes("NoSuchKey") ||
       error.message.includes("Object not found") ||
@@ -216,11 +213,14 @@ async function conectar() {
     if (connection === "open") {
       conectado = true;
       ultimoQR = null;
+      numeroConectado = sock?.user?.id || null;
+      console.log(`[DEBUG] WhatsApp conectado. Número/ID da sessão: ${numeroConectado}`);
       salvarSessaoNoSupabase();
     }
 
     if (connection === "close") {
       conectado = false;
+      numeroConectado = null;
       const codigo = lastDisconnect?.error?.output?.statusCode;
 
       if (codigo !== DisconnectReason.loggedOut) {
@@ -278,7 +278,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/status", (req, res) => {
-  res.json({ conectado });
+  res.json({ conectado, numero: numeroConectado });
 });
 
 app.get("/qr", async (req, res) => {
@@ -309,38 +309,76 @@ app.get("/grupos", async (req, res) => {
 
   try {
     const grupos = await sock.groupFetchAllParticipating();
-    const lista = Object.entries(grupos).map(([id, grupo]) => ({ id, nome: grupo.subject }));
-    res.json({ grupos: lista });
+    const lista = Object.entries(grupos).map(([id, grupo]) => ({
+      id,
+      nome: grupo.subject,
+      participantes: (grupo.participants || []).length
+    }));
+    res.json({ grupos: lista, numero_conectado: numeroConectado });
   } catch (erro) {
-    res.status(500).json({ erro: "Falha ao listar grupos." });
+    res.status(500).json({ erro: "Falha ao listar grupos.", detalhe: String(erro) });
   }
 });
 
 app.post("/send", async (req, res) => {
   const { group_id, message, image_url } = req.body || {};
 
+  console.log(`[DEBUG] /send chamado. group_id=${group_id} tem_imagem=${Boolean(image_url)}`);
+
   if (!group_id || !message) {
     return res.status(400).json({ erro: "Campos obrigatórios: group_id e message." });
   }
 
   if (!conectado || !sock) {
+    console.log("[DEBUG] /send falhou: WhatsApp não conectado.");
     return res.status(503).json({ erro: "WhatsApp não está conectado ainda." });
   }
 
+  // Confirma que o grupo existe e que a conta conectada é participante dele
+  // ANTES de tentar enviar, pra não "engolir" um erro silencioso.
   try {
+    const grupos = await sock.groupFetchAllParticipating();
+    if (!grupos[group_id]) {
+      console.log(`[DEBUG] /send falhou: group_id=${group_id} não está entre os grupos da conta conectada (${numeroConectado}).`);
+      return res.status(404).json({
+        erro: "A conta conectada não participa desse group_id.",
+        numero_conectado: numeroConectado,
+        grupos_disponiveis: Object.keys(grupos)
+      });
+    }
+  } catch (erro) {
+    console.log(`[DEBUG] /send: falha ao verificar grupos antes de enviar: ${erro}`);
+  }
+
+  try {
+    let resultadoEnvio;
+
     if (image_url) {
-      await sock.sendMessage(group_id, { image: { url: image_url }, caption: message });
+      try {
+        resultadoEnvio = await sock.sendMessage(group_id, { image: { url: image_url }, caption: message });
+      } catch (erroImagem) {
+        // Se a imagem falhar (hotlink bloqueado, URL inválida, etc.),
+        // cai pro texto puro em vez de perder o post inteiro.
+        console.log(`[DEBUG] Falha ao enviar com imagem, tentando só texto: ${erroImagem}`);
+        resultadoEnvio = await sock.sendMessage(group_id, { text: message });
+      }
     } else {
-      await sock.sendMessage(group_id, { text: message });
+      resultadoEnvio = await sock.sendMessage(group_id, { text: message });
     }
 
-    res.json({ ok: true });
+    const messageId = resultadoEnvio?.key?.id || null;
+    console.log(`[DEBUG] Mensagem enviada. messageId=${messageId} group_id=${group_id}`);
+
+    res.json({ ok: true, message_id: messageId });
   } catch (erro) {
+    console.log(`[DEBUG] ERRO ao enviar mensagem: ${erro}`);
     res.status(500).json({ erro: "Falha ao enviar mensagem.", detalhe: String(erro) });
   }
 });
 
-app.listen(PORT, () => {});
+app.listen(PORT, () => {
+  console.log(`[DEBUG] Servidor HTTP ouvindo na porta ${PORT}`);
+});
 
 async function shutdown() {
   clearTimeout(backupTimer);
@@ -358,4 +396,3 @@ process.once("SIGINT", shutdown);
   // Backup periódico para capturar arquivos de chave que o Baileys atualiza.
   setInterval(salvarSessaoNoSupabase, 60000).unref();
 })();
-
