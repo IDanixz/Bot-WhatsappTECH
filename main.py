@@ -106,203 +106,6 @@ SHOPEE_SEARCH_KEYWORDS = [
             "impressora",
             "camera de seguranca",
             "drone",
-            "monitor gamer",
-"monitor ultrawide",
-"monitor 4k",
-"monitor 144hz",
-"monitor 165hz",
-"monitor 180hz",
-"monitor 240hz",
-"monitor 360hz",
-"monitor portátil",
-"monitor curvo",
-"teclado mecânico",
-"teclado magnético",
-"teclado hall effect",
-"teclado gamer",
-"mouse gamer",
-"mouse sem fio",
-"mouse ultraleve",
-"mousepad gamer",
-"mousepad grande",
-"headset gamer",
-"headset sem fio",
-"fone bluetooth",
-"fone tws",
-"microfone gamer",
-"microfone usb",
-"microfone sem fio",
-"webcam",
-"webcam 2k",
-"webcam 4k",
-"controle gamer",
-"controle sem fio",
-"controle hall effect",
-"controle xbox",
-"controle ps4",
-"controle ps5",
-"controle pc",
-"volante gamer",
-"placa de vídeo",
-"placa de vídeo rtx",
-"placa de vídeo rx",
-"placa mãe",
-"placa mãe am4",
-"placa mãe am5",
-"processador amd",
-"processador intel",
-"ryzen 5",
-"ryzen 7",
-"ryzen 9",
-"core i5",
-"core i7",
-"core i9",
-"memória ram",
-"memória ram ddr4",
-"memória ram ddr5",
-"memória ram rgb",
-"ssd nvme",
-"ssd nvme gen3",
-"ssd nvme gen4",
-"ssd nvme gen5",
-"ssd sata",
-"ssd externo",
-"hd externo",
-"pendrive",
-"cartão de memória",
-"gabinete gamer",
-"gabinete aquário",
-"gabinete mesh",
-"gabinete mini tower",
-"fonte pc",
-"fonte modular",
-"fonte 80 plus",
-"water cooler",
-"water cooler 240mm",
-"water cooler 360mm",
-"air cooler",
-"cooler processador",
-"fan rgb",
-"kit fans rgb",
-"pasta térmica",
-"suporte de monitor",
-"suporte de notebook",
-"suporte de headset",
-"suporte de controle",
-"mesa gamer",
-"escrivaninha",
-"cadeira gamer",
-"cadeira escritório",
-"filtro de linha",
-"nobreak",
-"estabilizador",
-"hub usb",
-"hub usb c",
-"adaptador usb",
-"adaptador bluetooth",
-"adaptador wifi",
-"cabo hdmi",
-"cabo displayport",
-"cabo usb c",
-"cabo ethernet",
-"carregador",
-"carregador turbo",
-"carregador wireless",
-"power bank",
-"tomada inteligente",
-"roteador wifi",
-"roteador gamer",
-"roteador mesh",
-"repetidor wifi",
-"switch de rede",
-"placa wifi",
-"placa bluetooth",
-"smart tv",
-"smart tv 4k",
-"tv box",
-"fire tv stick",
-"chromecast",
-"projetor",
-"mini projetor",
-"soundbar",
-"caixa de som bluetooth",
-"caixa de som portátil",
-"smart speaker",
-"console de videogame",
-"playstation 5",
-"xbox series",
-"nintendo switch",
-"console portátil",
-"mini console",
-"acessórios para ps5",
-"acessórios para xbox",
-"acessórios para nintendo switch",
-"celular",
-"smartphone",
-"celular samsung",
-"celular xiaomi",
-"celular motorola",
-"celular poco",
-"celular redmi",
-"tablet",
-"tablet samsung",
-"tablet xiaomi",
-"tablet android",
-"notebook",
-"notebook gamer",
-"notebook ryzen",
-"notebook intel",
-"notebook ultrafino",
-"mini pc",
-"pc gamer",
-"computador desktop",
-"all in one",
-"impressora",
-"impressora multifuncional",
-"impressora térmica",
-"impressora 3d",
-"scanner",
-"mesa digitalizadora",
-"smartwatch",
-"smartband",
-"câmera de segurança",
-"câmera wifi",
-"câmera ip",
-"campainha inteligente",
-"fechadura inteligente",
-"lâmpada inteligente",
-"fita led",
-"luminária led",
-"luminária rgb",
-"ring light",
-"tripé",
-"suporte celular",
-"óculos vr",
-"action cam",
-"câmera esportiva",
-"drone",
-"acessórios para celular",
-"capinha de celular",
-"película celular",
-"carregador veicular",
-"suporte celular veicular",
-"mochila para notebook",
-"mouse gamer sem fio",
-"teclado gamer sem fio",
-"kit teclado e mouse",
-"kit upgrade pc",
-"kit ryzen",
-"kit xeon",
-"kit memória ram",
-"kit ssd",
-"kit pc gamer",
-"placa de captura",
-"capturadora de vídeo",
-"stream deck",
-"braço para microfone",
-"braço para monitor",
-"organizador de cabos",
-"extensão elétrica"
         ])
     ).split(",")
     if termo.strip()
@@ -335,69 +138,6 @@ TERMOS_TECH_PERMITIDOS = [
             "console", "joystick", "controle", "smartwatch", "relogio inteligente",
             "tablet", "smartphone", "celular", "impressora", "camera",
             "drone", "eletronico", "eletronicos", "gadget", "setup",
-            "pc gamer", "computador gamer", "computador", "desktop", "all in one",
-            "mini pc", "pc", "placa de captura", "capturadora", "placa de som",
-            "placa de rede", "placa wifi", "placa bluetooth", "gpu", "vga",
-            "rtx", "geforce", "radeon", "amd", "intel", "ryzen", "core i3",
-            "core i5", "core i7", "core i9", "xeon", "am4", "am5",
-            "ddr4", "ddr5", "nvme", "m.2", "m2", "sata", "ssd sata",
-            "ssd nvme", "ssd externo", "hd interno", "memoria ddr4",
-            "memoria ddr5", "memoria notebook", "ram rgb", "ram gamer",
-            "kit upgrade", "upgrade pc", "kit pc", "kit ryzen", "kit xeon",
-            "kit memoria", "kit ssd", "water cooler", "watercooler",
-            "air cooler", "cooler cpu", "cooler gabinete", "fan", "fan rgb",
-            "ventoinha", "ventoinha rgb", "pasta termica", "thermal paste",
-            "gabinete pc", "gabinete aquario", "gabinete rgb", "gabinete mesh",
-            "gabinete mini", "fonte pc", "fonte modular", "fonte gamer",
-            "fonte 80 plus", "filtro de linha", "nobreak", "estabilizador",
-            "extensao", "tomada inteligente", "plug inteligente",
-            "interruptor inteligente", "teclado gamer", "teclado mecanico",
-            "teclado rgb", "teclado compacto", "teclado wireless",
-            "teclado hall effect", "teclado magnetico", "mouse gamer",
-            "mouse rgb", "mouse sem fio", "mouse wireless", "mouse ultraleve",
-            "mouse ergonomico", "mouse vertical", "mouse optico",
-            "mousepad grande", "mousepad rgb", "headset gamer",
-            "headset wireless", "headset sem fio", "fone tws",
-            "fone gamer", "fone sem fio", "fone bluetooth", "soundbar",
-            "sound bar", "alto falante", "caixa bluetooth", "microfone usb",
-            "microfone condensador", "microfone sem fio", "ring light",
-            "luminaria", "luminaria led", "luminaria rgb", "fita led",
-            "luz led", "luz rgb", "luz de monitor", "tripé", "tripe",
-            "braco articulado", "braco de monitor", "braco de microfone",
-            "suporte de monitor", "suporte notebook", "suporte celular",
-            "suporte tablet", "suporte headset", "suporte controle",
-            "base notebook", "cooler notebook", "base refrigerada",
-            "camera web", "camera webcam", "webcam full hd", "webcam 4k",
-            "camera ip", "camera wifi", "camera seguranca", "camera digital",
-            "action cam", "action camera", "projetor", "mini projetor",
-            "tv box", "android tv", "google tv", "smart tv 4k",
-            "smart tv full hd", "tv led", "tv qled", "tv oled",
-            "console portatil", "console retro", "videogame", "playstation",
-            "xbox", "nintendo", "switch", "ps4", "ps5", "controle ps4",
-            "controle ps5", "controle xbox", "controle switch",
-            "volante gamer", "pedal gamer", "oculos vr", "realidade virtual",
-            "smartband", "smart ring", "celular gamer", "celular 5g",
-            "celular android", "iphone", "samsung galaxy", "galaxy",
-            "xiaomi", "redmi", "poco", "motorola", "tablet android",
-            "tablet gamer", "ipad", "notebook gamer", "notebook 2 em 1",
-            "ultrabook", "chromebook", "impressora multifuncional",
-            "impressora termica", "impressora 3d", "scanner",
-            "mesa digitalizadora", "caneta digital", "roteador gamer",
-            "roteador mesh", "roteador 5g", "modem", "modem 4g",
-            "modem 5g", "antena wifi", "switch ethernet", "ethernet",
-            "cabo de rede", "cat5", "cat6", "cat7", "displayport",
-            "vga", "dvi", "lightning", "micro usb", "carregador turbo",
-            "carregador rapido", "carregador wireless", "carregador usb",
-            "carregador veicular", "power station", "bateria externa",
-            "cartao microsd", "microsd", "cartao sd", "usb flash",
-            "pendrive usb", "case ssd", "case hd", "adaptador usb",
-            "adaptador bluetooth", "adaptador wifi", "hub usb-c",
-            "hub usb 3.0", "dock usb-c", "dock station", "cabo displayport",
-            "cabo ethernet", "cabo lightning", "cabo micro usb",
-            "cabo auxiliar", "organizador de cabos", "stream deck",
-            "captura de video", "placa de captura", "leitor de cartao",
-            "rastreador bluetooth", "gps", "drone com camera",
-            "drone 4k", "bateria drone", "carregador drone"
         ])
     ).split(",")
     if termo.strip()
@@ -433,10 +173,16 @@ def checar_configuracao():
     faltando = [k for k, v in obrigatorias.items() if not v]
 
     if faltando:
+        print(f"[DEBUG] Variáveis obrigatórias faltando: {faltando}", flush=True)
         sys.exit(1)
 
     if WHATSAPP_ENABLED and not WHATSAPP_GROUP_ID:
+        print("[DEBUG] WHATSAPP_ENABLED=true mas WHATSAPP_GROUP_ID está vazio.", flush=True)
         sys.exit(1)
+
+    print("[DEBUG] Configuração OK. Keywords carregadas:", len(SHOPEE_SEARCH_KEYWORDS), flush=True)
+    print("[DEBUG] Termos tech carregados:", len(TERMOS_TECH_PERMITIDOS), flush=True)
+    print(f"[DEBUG] SHOPEE_PRODUCT_LIMIT={SHOPEE_PRODUCT_LIMIT} SHOPEE_VENDAS_MINIMAS={SHOPEE_VENDAS_MINIMAS} SHOPEE_AVALIACAO_MINIMA={SHOPEE_AVALIACAO_MINIMA}", flush=True)
 
     global supabase
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -485,6 +231,8 @@ def carregar_historico_supabase():
             break
 
         inicio += tamanho
+
+    print(f"[DEBUG] Histórico carregado do Supabase: {len(postados_cache)} produtos já postados.", flush=True)
 
 
 def salvar_produto_postado(produto: dict):
@@ -746,9 +494,11 @@ def processar_produto(produto: dict) -> bool:
         )
 
         salvar_produto_postado(produto)
+        print(f"[DEBUG] POSTADO: {produto.get('productName')}", flush=True)
         return True
 
-    except Exception:
+    except Exception as e:
+        print(f"[DEBUG] ERRO ao enviar/salvar produto '{produto.get('productName')}': {e}", flush=True)
         return False
 
 
@@ -762,36 +512,49 @@ def rodar_uma_vez():
     postados_nesta_rodada = 0
 
     if not SHOPEE_SEARCH_KEYWORDS:
+        print("[DEBUG] Lista de keywords está vazia!", flush=True)
         return
 
     for keyword in SHOPEE_SEARCH_KEYWORDS:
         pagina = 1
+        print(f"[DEBUG] === Buscando keyword: '{keyword}' ===", flush=True)
 
         while True:
             try:
                 produtos, page_info = buscar_pagina(keyword, pagina)
-            except Exception:
+            except Exception as e:
+                print(f"[DEBUG] ERRO na busca (keyword='{keyword}', pagina={pagina}): {e}", flush=True)
                 break  # tenta a próxima keyword
+
+            print(f"[DEBUG] keyword='{keyword}' pagina={pagina}: {len(produtos)} produtos retornados pela Shopee", flush=True)
 
             if not produtos:
                 break
+
+            passaram_filtro = 0
+            ja_postados = 0
 
             for produto in produtos:
                 if not produto_passou_filtro(produto):
                     continue
 
+                passaram_filtro += 1
                 produto_id = id_do_produto(produto)
 
                 if produto_id in postados_cache:
+                    ja_postados += 1
                     continue
 
                 if processar_produto(produto):
                     postados_nesta_rodada += 1
 
                     if postados_nesta_rodada >= limite_posts:
+                        print(f"[DEBUG] Limite de {limite_posts} posts atingido nesta rodada.", flush=True)
                         return
 
                     time.sleep(2)
+
+            print(f"[DEBUG] keyword='{keyword}' pagina={pagina}: {passaram_filtro} passaram no filtro tech, {ja_postados} já tinham sido postados antes", flush=True)
 
             if not page_info.get("hasNextPage"):
                 break
@@ -802,14 +565,17 @@ def rodar_uma_vez():
         # pequena pausa entre uma keyword e outra
         time.sleep(SHOPEE_INTERVALO_KEYWORDS)
 
+    print(f"[DEBUG] Rodada finalizada. Total postado nesta rodada: {postados_nesta_rodada}", flush=True)
+
 
 def rodar_continuamente():
     while True:
         try:
             rodar_uma_vez()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[DEBUG] ERRO inesperado em rodar_uma_vez: {e}", flush=True)
 
+        print(f"[DEBUG] Aguardando {POST_INTERVAL_SEGUNDOS}s até a próxima rodada...", flush=True)
         time.sleep(max(POST_INTERVAL_SEGUNDOS, 1))
 
 
