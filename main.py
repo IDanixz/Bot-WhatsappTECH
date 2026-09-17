@@ -120,6 +120,9 @@ SHOPEE_INTERVALO_PAGINAS = float(
 SHOPEE_INTERVALO_KEYWORDS = float(
     os.getenv("SHOPEE_INTERVALO_KEYWORDS", "0.5")
 )
+# Limite de páginas por keyword nesta rodada (evita ficar preso numa
+# keyword só, gastando todas as requisições nela). Ajustável via .env.
+SHOPEE_MAX_PAGINAS_POR_KEYWORD = int(os.getenv("SHOPEE_MAX_PAGINAS_POR_KEYWORD", "3"))
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -474,6 +477,14 @@ def rodar_uma_vez():
 
             print(f"[DEBUG] keyword='{keyword}' pagina={pagina}: {len(produtos)} produtos retornados pela Shopee", flush=True)
 
+            if pagina == 1 and produtos:
+                print("[DEBUG] Amostra dos 3 primeiros produtos (nome | sales | ratingStar):", flush=True)
+                for p in produtos[:3]:
+                    print(
+                        f"[DEBUG]   - {p.get('productName')!r} | sales={p.get('sales')!r} | ratingStar={p.get('ratingStar')!r}",
+                        flush=True,
+                    )
+
             if not produtos:
                 break
 
@@ -503,6 +514,10 @@ def rodar_uma_vez():
             print(f"[DEBUG] keyword='{keyword}' pagina={pagina}: {passaram_filtro} passaram no filtro (vendas/nota), {ja_postados} já tinham sido postados antes", flush=True)
 
             if not page_info.get("hasNextPage"):
+                break
+
+            if pagina >= SHOPEE_MAX_PAGINAS_POR_KEYWORD:
+                print(f"[DEBUG] Atingiu o limite de {SHOPEE_MAX_PAGINAS_POR_KEYWORD} páginas para essa keyword, pulando pra próxima.", flush=True)
                 break
 
             pagina += 1
